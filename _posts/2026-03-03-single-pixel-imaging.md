@@ -28,37 +28,54 @@ However, cameras with a single pixel also have some useful properties:
 The core idea of SPI is to take *multiple* single-pixel measurements from the same scene under different lighting conditions, which - with some *mathemagics* involved - will eventually allow us to reconstruct the actual image that we would have obtained when using a normal camera.
 While not much hardware is required for SPI, the complexity is instead shifted to the software side.
 
-Classical SPI setups have 3 main components:
+Classical SPI setups have the following main components:
 
-1. A Spatial Light Modulator
-2. A single light detector
-3. The scene under view
+1. A light source
+2. The scene under view
+3. A Spatial Light Modulator
+4. A single light detector
 
-Using the *Spatial Light Modulator* (SLM), we can modulate the intensity of the light beam according to control signal.
+First, the light source illuminates the scene under view - this is the image we would take with a normal camera.
+In SPI however, the light reflected by the scene is focused onto a *Spatial Light Modulator* (SLM), which modulates the intensity of the light according to a control signal.
 A reflective SLM is given by the *Digital Micromirror Device* (DMD).
-A DMD is basically an array of mirrors, except that each mirror has a size comparable to a bacterium.
+A DMD is basically an array of mirrors, except that the mirrors are comparable to a bacterium in size.
 Each mirror can be configured individually to be rotated into one of two possible orientations for reflecting light.
+This way, the DMD controls how much light is directed at the single light detector, and in turn, how much voltage is produced by it.
 
-Mathematically, the $m$-th measurement $y_m$ taken by the single-pixel camera can be considered as the inner product
+Now, let's look at the math behind SPI to figure out, how we can reconstruct the image from those measurements.
+The $m$-th measurement $y_m$ taken by the single-pixel camera can be considered as the inner product
 
 $$
     y_m = \langle x, \phi_m \rangle,
 $$
 
 where $x \in \mathbb{R}^{N}$ is a vector that holds $N$-samples of the scene's light-field, and $\phi_m \in \{0, 1\}^N$ is the $m$-th *test function*.
+
 While in this equation, $x$ is represented as $N = W\cdot H$ dimensional vector for the inner product, note that you could *reshape* $x$ into a $(H, W)$ matrix, where each element corresponds to a pixel in the desired image of the scene under view.
 Therefore, $x$ is the desired image that we want to reconstruct from our $m$ single-pixel measurements $y$!
+
 Similarly, each element of $\phi_m$ corresponds to a mirror in the 2D mirror array of the DMD, and controls its orientation.
 If the element in $\phi_m$ is one, the respective mirror will redirect the light *towards* the sensor - but if the element is zero, it will reflect the light *away* from the sensor instead.
+In the simplest case, you can just use a random matrix as test function $\phi_m$, where each element is randomly sampled from $\{0, 1\}$.
+
 Therefore, the product $\langle x, \phi_m \rangle$ at its core is just the sum of all the light coming from the scene $x$, with some pixels being "turned off" in a controlled manner by the DMD via the test function $\phi_m$, resulting in the measured voltage $y_m$ at our single-pixel camera.
 
-> How do we define test functions $\phi_m$?
-    - can just use random matrices
-> Why do we use the Hadamard Transform?
+But how can we reconstruct the actual image only from light intensity measurements $y_m$ caused by random mirror configurations $phi_m$?
 
+If we stack our test functions $\phi_m$ row-wise into a matrix $\Phi$, all of our measurements $y_m$ can be written as vector $\bm{y}$:
 
+$$
+    \bm{y} = \Phi \bm{x}
+$$
 
-where $x$ is the N-pixel sampled version 
+Now, let's try a different perspective by denoting the test matrix $\Phi$ as $\bm{X}$ and our image vector $\bm{x}$ as $\bm{\beta}$:
+
+$$
+    \bm{y} = \bm{X} \bm{\beta}
+$$
+
+Since we want to reconstruct the image $\bm{x}$ ($\beta$) for a given $y$ and $\Phi$ ($X$), this is actually just a standard linear regression problem which has a unique solution if the number of measurements $m$ is just big enough!
+
 
 ## Compressive Sampling
 
